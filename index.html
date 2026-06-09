@@ -230,7 +230,48 @@ body{background:var(--cream);font-family:'Inter',sans-serif;color:var(--text-pri
 .btn-remove{background:#B71C1C;color:#fff}
 .btn-round{background:var(--gold);color:var(--maroon-dark)}
 .btn-end{background:var(--maroon-light);color:var(--white)}
+.btn-substitute{background:rgba(255,255,255,0.12);color:var(--cream);border:1px solid rgba(228,168,130,0.35)}
 .btn-action:hover:not(:disabled){filter:brightness(1.08)}
+
+/* Modal remplacement */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(42,14,6,0.55);z-index:200;
+  display:none;align-items:center;justify-content:center;padding:20px;
+  backdrop-filter:blur(3px);
+}
+.modal-overlay.show{display:flex}
+.modal-box{
+  background:var(--white);border-radius:16px;padding:28px 32px;width:100%;max-width:420px;
+  box-shadow:0 16px 48px rgba(0,0,0,0.25);animation:fadeIn .25s ease;
+}
+.modal-title{
+  font-family:'Oswald',sans-serif;font-size:1.15rem;font-weight:600;text-transform:uppercase;
+  letter-spacing:2px;color:var(--maroon-main);margin-bottom:6px;
+}
+.modal-sub{font-size:.85rem;color:var(--text-secondary);margin-bottom:20px;line-height:1.4}
+.modal-sub strong{color:var(--maroon-main)}
+.modal-field{margin-bottom:16px}
+.modal-field label{
+  display:block;font-size:.72rem;font-weight:500;color:var(--text-secondary);
+  text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;
+}
+.modal-field input[type="text"]{
+  width:100%;padding:10px 12px;border:1px solid var(--cream-dark);border-radius:8px;
+  font-family:'Inter',sans-serif;font-size:.95rem;color:var(--text-primary);outline:none;
+}
+.modal-field input[type="text"]:focus{border-color:var(--gold)}
+.modal-photo-row{display:flex;align-items:center;gap:12px}
+.modal-photo-row .photo-upload{width:52px;height:52px;border-color:var(--cream-dark);background:var(--cream)}
+.modal-photo-row .photo-upload .photo-icon{color:var(--maroon-main)}
+.modal-check{
+  display:flex;align-items:flex-start;gap:10px;font-size:.85rem;color:var(--text-secondary);
+  cursor:pointer;margin-bottom:20px;line-height:1.35;
+}
+.modal-check input{margin-top:3px;accent-color:var(--maroon-main)}
+.modal-actions{display:flex;gap:10px}
+.modal-actions .btn-action{flex:1;padding:11px}
+.btn-modal-cancel{background:var(--cream-dark);color:var(--text-primary)}
+.btn-modal-confirm{background:var(--maroon-main);color:var(--cream)}
 
 #round-overlay{
   position:fixed;inset:0;background:var(--maroon-dark);display:flex;flex-direction:column;
@@ -383,6 +424,7 @@ body{background:var(--cream);font-family:'Inter',sans-serif;color:var(--text-pri
     </div>
     <button class="btn-action btn-add" id="btnAddPts" onclick="modifyPoints(1)" disabled>+ Points</button>
     <button class="btn-action btn-remove" id="btnRemovePts" onclick="modifyPoints(-1)" disabled>− Points</button>
+    <button class="btn-action btn-substitute" id="btnSubstitute" onclick="openSubstituteModal()" disabled>Remplacer</button>
   </div>
   <div class="bottom-divider"></div>
   <div class="bottom-group">
@@ -421,6 +463,38 @@ body{background:var(--cream);font-family:'Inter',sans-serif;color:var(--text-pri
 <div id="round-overlay">
   <div class="overlay-label">Manche</div>
   <div class="overlay-num" id="overlayNum">1</div>
+</div>
+
+<div class="modal-overlay" id="substituteModal" onclick="if(event.target===this)closeSubstituteModal()">
+  <div class="modal-box">
+    <div class="modal-title">Remplacement de joueur</div>
+    <p class="modal-sub" id="substituteContext">—</p>
+    <div class="modal-field">
+      <label>Nouveau joueur</label>
+      <input type="text" id="substituteName" placeholder="Nom du remplaçant">
+    </div>
+    <div class="modal-field">
+      <label>Photo (optionnel)</label>
+      <div class="modal-photo-row">
+        <label class="photo-upload" for="substitutePhoto" title="Ajouter une photo">
+          <img id="substitutePreview" alt="" style="display:none">
+          <span class="photo-add" id="substitutePh">
+            <svg class="photo-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/><circle cx="8.5" cy="10.5" r="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M21 16l-5-5a1.5 1.5 0 00-2.1 0L9 16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+        </label>
+        <input type="file" id="substitutePhoto" accept="image/*" hidden onchange="onSubstitutePhotoPick(this)">
+        <span style="font-size:.8rem;color:var(--text-secondary)">Laisser vide pour garder l'ancienne photo ou les initiales</span>
+      </div>
+    </div>
+    <label class="modal-check">
+      <input type="checkbox" id="substituteResetPts">
+      <span>Réinitialiser les points individuels de ce siège (le score d'équipe est ajusté)</span>
+    </label>
+    <div class="modal-actions">
+      <button type="button" class="btn-action btn-modal-cancel" onclick="closeSubstituteModal()">Annuler</button>
+      <button type="button" class="btn-action btn-modal-confirm" onclick="confirmSubstitute()">Confirmer</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -546,7 +620,7 @@ function startMatch() {
   showScreen("match");
   document.getElementById("bottomBar").style.display = "flex";
   document.getElementById("ptsValueMatch").value = state.ptsValue;
-  updatePtsButtons();
+  updateActionButtons();
   showRoundOverlay(1);
 }
 
@@ -554,13 +628,13 @@ function onPtsValueChange() {
   const raw = parseInt(document.getElementById("ptsValueMatch").value, 10);
   state.ptsValue = Number.isFinite(raw) ? Math.min(99, Math.max(1, raw)) : 1;
   document.getElementById("ptsValueMatch").value = state.ptsValue;
-  updatePtsButtons();
+  updateActionButtons();
 }
 
 function changePtsValue(delta) {
   state.ptsValue = Math.min(99, Math.max(1, state.ptsValue + delta));
   document.getElementById("ptsValueMatch").value = state.ptsValue;
-  updatePtsButtons();
+  updateActionButtons();
 }
 
 function showScreen(id) {
@@ -613,18 +687,96 @@ function selectPlayer(team, index) {
       if (row) row.classList.toggle("selected", state.selected.team === t && state.selected.index === i);
     });
   });
-  updatePtsButtons();
+  updateActionButtons();
 }
 
-function updatePtsButtons() {
+let substitutePhotoData = null;
+
+function updateActionButtons() {
   const has = !!state.selected;
   const label = state.ptsValue + " pt" + (state.ptsValue > 1 ? "s" : "");
-  const add = document.getElementById("btnAddPts");
-  const rem = document.getElementById("btnRemovePts");
-  add.disabled = !has;
-  rem.disabled = !has;
-  add.textContent = "+ " + label;
-  rem.textContent = "− " + label;
+  document.getElementById("btnAddPts").disabled = !has;
+  document.getElementById("btnRemovePts").disabled = !has;
+  document.getElementById("btnSubstitute").disabled = !has;
+  document.getElementById("btnAddPts").textContent = "+ " + label;
+  document.getElementById("btnRemovePts").textContent = "− " + label;
+}
+
+function openSubstituteModal() {
+  if (!state.selected) return;
+  const { team, index } = state.selected;
+  const oldName = state.players[team][index];
+  document.getElementById("substituteContext").innerHTML =
+    "Remplacer <strong>" + oldName + "</strong> (" + state.teams[team] + ")";
+  document.getElementById("substituteName").value = "";
+  document.getElementById("substituteResetPts").checked = false;
+  resetSubstitutePhoto();
+  document.getElementById("substituteModal").classList.add("show");
+  setTimeout(() => document.getElementById("substituteName").focus(), 100);
+}
+
+function closeSubstituteModal() {
+  document.getElementById("substituteModal").classList.remove("show");
+  resetSubstitutePhoto();
+}
+
+function resetSubstitutePhoto() {
+  substitutePhotoData = null;
+  const preview = document.getElementById("substitutePreview");
+  const ph = document.getElementById("substitutePh");
+  preview.src = "";
+  preview.style.display = "none";
+  ph.style.display = "";
+  preview.closest(".photo-upload").classList.remove("has-photo");
+  document.getElementById("substitutePhoto").value = "";
+}
+
+function onSubstitutePhotoPick(input) {
+  const file = input.files && input.files[0];
+  if (!file || !file.type.startsWith("image/")) return;
+  resizeImage(file, 128, dataUrl => {
+    substitutePhotoData = dataUrl;
+    const preview = document.getElementById("substitutePreview");
+    const ph = document.getElementById("substitutePh");
+    preview.src = dataUrl;
+    preview.style.display = "block";
+    ph.style.display = "none";
+    preview.closest(".photo-upload").classList.add("has-photo");
+  });
+  input.value = "";
+}
+
+function confirmSubstitute() {
+  if (!state.selected) return;
+  const { team, index } = state.selected;
+  const oldName = state.players[team][index];
+  const newName = document.getElementById("substituteName").value.trim();
+  if (!newName) {
+    document.getElementById("substituteName").focus();
+    return;
+  }
+  if (newName === oldName && !substitutePhotoData && !document.getElementById("substituteResetPts").checked) {
+    closeSubstituteModal();
+    return;
+  }
+
+  if (document.getElementById("substituteResetPts").checked) {
+    const pts = state.playerScores[team][index];
+    state.scores[team] -= pts;
+    if (state.scores[team] < 0) state.scores[team] = 0;
+    state.playerScores[team][index] = 0;
+    updateScore(team, true);
+  }
+
+  state.players[team][index] = newName;
+  if (substitutePhotoData) {
+    state.playerPhotos[team][index] = substitutePhotoData;
+  }
+
+  addFeed("↔ " + oldName + " → " + newName + " (" + state.teams[team] + ")", team);
+  renderPlayers(team);
+  selectPlayer(team, index);
+  closeSubstituteModal();
 }
 
 function modifyPoints(sign) {
