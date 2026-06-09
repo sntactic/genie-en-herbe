@@ -204,6 +204,21 @@ body{background:var(--cream);font-family:'Inter',sans-serif;color:var(--text-pri
   font-size:.65rem;color:var(--maroon-pale);text-transform:uppercase;letter-spacing:1px;
   font-family:'Oswald',sans-serif;margin-right:4px;
 }
+.pts-stepper{display:flex;align-items:center;gap:4px}
+.pts-step{
+  width:32px;height:32px;border:none;border-radius:6px;background:rgba(255,255,255,0.1);
+  color:var(--cream);font-size:1.1rem;font-weight:600;cursor:pointer;line-height:1;
+  transition:background .15s;display:flex;align-items:center;justify-content:center;
+}
+.pts-step:hover{background:rgba(255,255,255,0.18)}
+.pts-input{
+  width:48px;height:32px;border:1px solid rgba(228,168,130,0.35);border-radius:6px;
+  background:rgba(255,255,255,0.08);color:var(--cream);font-family:'Oswald',sans-serif;
+  font-size:1rem;font-weight:600;text-align:center;outline:none;
+  -moz-appearance:textfield;
+}
+.pts-input::-webkit-outer-spin-button,.pts-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.pts-input:focus{border-color:var(--gold-light)}
 .btn-action{
   padding:10px 18px;border:none;border-radius:8px;font-family:'Oswald',sans-serif;
   font-size:.85rem;font-weight:600;letter-spacing:1px;cursor:pointer;
@@ -361,6 +376,11 @@ body{background:var(--cream);font-family:'Inter',sans-serif;color:var(--text-pri
 <nav class="bottom-bar" id="bottomBar" style="display:none">
   <div class="bottom-group">
     <span class="bottom-label">Points</span>
+    <div class="pts-stepper">
+      <button type="button" class="pts-step" onclick="changePtsValue(-1)" title="Diminuer">−</button>
+      <input type="number" class="pts-input" id="ptsValueMatch" value="2" min="1" max="99" onchange="onPtsValueChange()" oninput="onPtsValueChange()">
+      <button type="button" class="pts-step" onclick="changePtsValue(1)" title="Augmenter">+</button>
+    </div>
     <button class="btn-action btn-add" id="btnAddPts" onclick="modifyPoints(1)" disabled>+ Points</button>
     <button class="btn-action btn-remove" id="btnRemovePts" onclick="modifyPoints(-1)" disabled>− Points</button>
   </div>
@@ -525,8 +545,22 @@ function startMatch() {
   updateMatchUI();
   showScreen("match");
   document.getElementById("bottomBar").style.display = "flex";
+  document.getElementById("ptsValueMatch").value = state.ptsValue;
   updatePtsButtons();
   showRoundOverlay(1);
+}
+
+function onPtsValueChange() {
+  const raw = parseInt(document.getElementById("ptsValueMatch").value, 10);
+  state.ptsValue = Number.isFinite(raw) ? Math.min(99, Math.max(1, raw)) : 1;
+  document.getElementById("ptsValueMatch").value = state.ptsValue;
+  updatePtsButtons();
+}
+
+function changePtsValue(delta) {
+  state.ptsValue = Math.min(99, Math.max(1, state.ptsValue + delta));
+  document.getElementById("ptsValueMatch").value = state.ptsValue;
+  updatePtsButtons();
 }
 
 function showScreen(id) {
