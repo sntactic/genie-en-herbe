@@ -53,6 +53,26 @@ body{background:var(--cream);font-family:'Inter',sans-serif;color:var(--text-pri
 }
 .form-group input::placeholder{color:rgba(228,168,130,0.4)}
 .form-group input:focus{border-color:var(--gold-light);background:rgba(255,255,255,0.12)}
+.player-field{margin-bottom:14px}
+.player-field>label{margin-bottom:6px}
+.player-setup-row{display:flex;align-items:center;gap:10px}
+.player-setup-row input[type="text"]{flex:1;min-width:0}
+.photo-upload{
+  width:44px;height:44px;border-radius:50%;flex-shrink:0;cursor:pointer;
+  border:2px dashed rgba(228,168,130,0.45);background:rgba(255,255,255,0.06);
+  display:flex;align-items:center;justify-content:center;overflow:hidden;
+  transition:border-color .2s,background .2s;position:relative;
+}
+.photo-upload:hover{border-color:var(--gold-light);background:rgba(255,255,255,0.1)}
+.photo-upload img{width:100%;height:100%;object-fit:cover;display:block}
+.photo-upload .photo-add{font-size:1.1rem;line-height:1;opacity:.7;pointer-events:none}
+.photo-upload.has-photo{border-style:solid;border-color:var(--gold-light)}
+.photo-clear{
+  width:28px;height:28px;border-radius:50%;border:none;background:rgba(0,0,0,0.25);
+  color:var(--cream);font-size:1rem;cursor:pointer;flex-shrink:0;line-height:1;
+  display:none;align-items:center;justify-content:center;
+}
+.photo-clear.visible{display:flex}
 .setup-config{margin-top:24px;display:flex;justify-content:center}
 .setup-config .form-group{margin-bottom:0;min-width:160px}
 .setup-config input{text-align:center}
@@ -134,6 +154,8 @@ body{background:var(--cream);font-family:'Inter',sans-serif;color:var(--text-pri
 }
 .player-avatar.team-a{background:var(--team-a)}
 .player-avatar.team-b{background:var(--team-b)}
+.player-avatar.has-photo{background:var(--cream-dark);overflow:hidden;padding:0}
+.player-avatar img{width:100%;height:100%;object-fit:cover;display:block}
 .player-name{flex:1;font-size:.9rem;font-weight:500;color:var(--text-primary)}
 .player-pts{
   font-family:'Oswald',sans-serif;font-size:1rem;font-weight:600;color:var(--maroon-main);
@@ -212,6 +234,15 @@ body{background:var(--cream);font-family:'Inter',sans-serif;color:var(--text-pri
 .wscore-num{font-family:'Oswald',sans-serif;font-size:3rem;font-weight:700;color:var(--cream)}
 .mvp-section{margin:20px 0;padding:16px;background:rgba(212,168,67,0.12);border-radius:12px;border:1px solid rgba(212,168,67,0.25)}
 .mvp-label{font-size:.7rem;color:var(--gold-light);text-transform:uppercase;letter-spacing:2px;font-family:'Oswald',sans-serif;margin-bottom:4px}
+.mvp-row{display:flex;align-items:center;justify-content:center;gap:14px}
+.mvp-avatar{
+  width:52px;height:52px;border-radius:50%;overflow:hidden;flex-shrink:0;
+  background:rgba(255,255,255,0.1);border:2px solid var(--gold-light);
+  display:none;align-items:center;justify-content:center;
+  font-family:'Oswald',sans-serif;font-size:1rem;color:var(--cream);
+}
+.mvp-avatar.show{display:flex}
+.mvp-avatar img{width:100%;height:100%;object-fit:cover}
 .mvp-name{font-size:1.2rem;font-weight:600;color:var(--cream)}
 .btn-play-again{
   margin-top:28px;padding:14px 40px;background:var(--gold);color:var(--maroon-dark);
@@ -245,18 +276,18 @@ body{background:var(--cream);font-family:'Inter',sans-serif;color:var(--text-pri
         <div class="setup-team team-a">
           <h3>Équipe A</h3>
           <div class="form-group"><label>Nom de l'équipe</label><input type="text" id="nameA" value="Équipe Alpha"></div>
-          <div class="form-group"><label>Joueur 1</label><input type="text" id="a1" value="Joueur A1"></div>
-          <div class="form-group"><label>Joueur 2</label><input type="text" id="a2" value="Joueur A2"></div>
-          <div class="form-group"><label>Joueur 3</label><input type="text" id="a3" value="Joueur A3"></div>
-          <div class="form-group"><label>Joueur 4</label><input type="text" id="a4" value="Joueur A4"></div>
+          <div class="form-group player-field" id="field-a1"></div>
+          <div class="form-group player-field" id="field-a2"></div>
+          <div class="form-group player-field" id="field-a3"></div>
+          <div class="form-group player-field" id="field-a4"></div>
         </div>
         <div class="setup-team team-b">
           <h3>Équipe B</h3>
           <div class="form-group"><label>Nom de l'équipe</label><input type="text" id="nameB" value="Équipe Beta"></div>
-          <div class="form-group"><label>Joueur 1</label><input type="text" id="b1" value="Joueur B1"></div>
-          <div class="form-group"><label>Joueur 2</label><input type="text" id="b2" value="Joueur B2"></div>
-          <div class="form-group"><label>Joueur 3</label><input type="text" id="b3" value="Joueur B3"></div>
-          <div class="form-group"><label>Joueur 4</label><input type="text" id="b4" value="Joueur B4"></div>
+          <div class="form-group player-field" id="field-b1"></div>
+          <div class="form-group player-field" id="field-b2"></div>
+          <div class="form-group player-field" id="field-b3"></div>
+          <div class="form-group player-field" id="field-b4"></div>
         </div>
       </div>
       <div class="setup-config">
@@ -343,7 +374,10 @@ body{background:var(--cream);font-family:'Inter',sans-serif;color:var(--text-pri
     </div>
     <div class="mvp-section">
       <div class="mvp-label">⭐ Meilleur joueur</div>
-      <div class="mvp-name" id="mvpName">—</div>
+      <div class="mvp-row">
+        <div class="mvp-avatar" id="mvpAvatar"></div>
+        <div class="mvp-name" id="mvpName">—</div>
+      </div>
     </div>
     <button class="btn-play-again" onclick="resetAll()">Nouveau match</button>
   </div>
@@ -355,22 +389,119 @@ body{background:var(--cream);font-family:'Inter',sans-serif;color:var(--text-pri
 </div>
 
 <script>
+// Photos de profil (base64) pendant la configuration
+const setupPhotos = {};
+
 // État du match
 let state = {
   teams: { a: "Équipe Alpha", b: "Équipe Beta" },
   players: { a: ["","","",""], b: ["","","",""] },
+  playerPhotos: { a: [null,null,null,null], b: [null,null,null,null] },
   scores: { a: 0, b: 0 },
   playerScores: { a: [0,0,0,0], b: [0,0,0,0] },
   round: 1,
   ptsValue: 2,
-  selected: null // { team: 'a'|'b', index: 0-3 }
+  selected: null
 };
+
+const DEFAULT_NAMES = {
+  a: ["Joueur A1","Joueur A2","Joueur A3","Joueur A4"],
+  b: ["Joueur B1","Joueur B2","Joueur B3","Joueur B4"]
+};
+
+// Construit les champs joueur avec option photo sur l'écran d'initialisation
+function buildPlayerFields() {
+  ["a","b"].forEach(team => {
+    [1,2,3,4].forEach(i => {
+      const id = team + i;
+      const field = document.getElementById("field-" + id);
+      field.innerHTML = `
+        <label>Joueur ${i}</label>
+        <div class="player-setup-row">
+          <label class="photo-upload" for="photo-${id}" title="Ajouter une photo">
+            <img id="preview-${id}" alt="" style="display:none">
+            <span class="photo-add" id="ph-${id}">📷</span>
+          </label>
+          <input type="file" id="photo-${id}" accept="image/*" hidden onchange="onPhotoPick('${id}', this)">
+          <input type="text" id="${id}" value="${DEFAULT_NAMES[team][i-1]}">
+          <button type="button" class="photo-clear" id="clear-${id}" onclick="clearPlayerPhoto('${id}')" title="Supprimer la photo">×</button>
+        </div>`;
+    });
+  });
+}
+
+// Redimensionne et compresse l'image pour l'affichage
+function resizeImage(file, maxSize, callback) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      let w = img.width, h = img.height;
+      if (w > maxSize || h > maxSize) {
+        if (w > h) { h = Math.round(h * maxSize / w); w = maxSize; }
+        else { w = Math.round(w * maxSize / h); h = maxSize; }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+      callback(canvas.toDataURL("image/jpeg", 0.82));
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function onPhotoPick(id, input) {
+  const file = input.files && input.files[0];
+  if (!file || !file.type.startsWith("image/")) return;
+  resizeImage(file, 128, dataUrl => {
+    setupPhotos[id] = dataUrl;
+    const preview = document.getElementById("preview-" + id);
+    const placeholder = document.getElementById("ph-" + id);
+    const upload = preview.closest(".photo-upload");
+    preview.src = dataUrl;
+    preview.style.display = "block";
+    placeholder.style.display = "none";
+    upload.classList.add("has-photo");
+    document.getElementById("clear-" + id).classList.add("visible");
+  });
+  input.value = "";
+}
+
+function clearPlayerPhoto(id) {
+  delete setupPhotos[id];
+  const preview = document.getElementById("preview-" + id);
+  const placeholder = document.getElementById("ph-" + id);
+  const upload = preview.closest(".photo-upload");
+  preview.src = "";
+  preview.style.display = "none";
+  placeholder.style.display = "";
+  upload.classList.remove("has-photo");
+  document.getElementById("clear-" + id).classList.remove("visible");
+  document.getElementById("photo-" + id).value = "";
+}
+
+function getInitials(name) {
+  return name.split(" ").map(w => w[0] || "").join("").substring(0, 2).toUpperCase() || "?";
+}
+
+function avatarHtml(team, index, name) {
+  const photo = state.playerPhotos[team][index];
+  const cls = "player-avatar " + (team === "a" ? "team-a" : "team-b") + (photo ? " has-photo" : "");
+  if (photo) return `<div class="${cls}"><img src="${photo}" alt="${name}"></div>`;
+  return `<div class="${cls}">${getInitials(name)}</div>`;
+}
+
+buildPlayerFields();
 
 function startMatch() {
   state.teams.a = document.getElementById("nameA").value.trim() || "Équipe Alpha";
   state.teams.b = document.getElementById("nameB").value.trim() || "Équipe Beta";
-  state.players.a = [1,2,3,4].map(i => document.getElementById("a"+i).value.trim() || "Joueur A"+i);
-  state.players.b = [1,2,3,4].map(i => document.getElementById("b"+i).value.trim() || "Joueur B"+i);
+  state.players.a = [1,2,3,4].map(i => document.getElementById("a"+i).value.trim() || DEFAULT_NAMES.a[i-1]);
+  state.players.b = [1,2,3,4].map(i => document.getElementById("b"+i).value.trim() || DEFAULT_NAMES.b[i-1]);
+  state.playerPhotos.a = [1,2,3,4].map(i => setupPhotos["a"+i] || null);
+  state.playerPhotos.b = [1,2,3,4].map(i => setupPhotos["b"+i] || null);
   state.ptsValue = parseInt(document.getElementById("ptsValue").value) || 2;
   state.scores = { a: 0, b: 0 };
   state.playerScores = { a: [0,0,0,0], b: [0,0,0,0] };
@@ -415,9 +546,8 @@ function renderPlayers(team) {
     const isSelected = state.selected && state.selected.team === team && state.selected.index === i;
     row.className = "player-row" + (isSelected ? " selected" : "");
     row.id = "player_" + team + "_" + i;
-    const initials = name.split(" ").map(w => w[0]||"").join("").substring(0,2).toUpperCase() || "?";
     row.innerHTML = `
-      <div class="player-avatar ${team === "a" ? "team-a" : "team-b"}">${initials}</div>
+      ${avatarHtml(team, i, name)}
       <div class="player-name">${name}</div>
       <div class="player-pts" id="pts_${team}_${i}">${state.playerScores[team][i]} pt</div>
     `;
@@ -505,28 +635,50 @@ function endMatch() {
   document.getElementById("wScoreA").textContent = sa;
   document.getElementById("wScoreB").textContent = sb;
 
-  let mvpName = "—", mvpPts = -1;
+  let mvpName = "—", mvpPts = -1, mvpPhoto = null, mvpInitials = "";
   ["a","b"].forEach(t => {
     state.playerScores[t].forEach((pts, i) => {
-      if (pts > mvpPts) { mvpPts = pts; mvpName = state.players[t][i] + " (" + state.teams[t] + ") — " + pts + " pt"; }
+      if (pts > mvpPts) {
+        mvpPts = pts;
+        mvpName = state.players[t][i] + " (" + state.teams[t] + ") — " + pts + " pt";
+        mvpPhoto = state.playerPhotos[t][i];
+        mvpInitials = getInitials(state.players[t][i]);
+      }
     });
   });
   if (mvpPts <= 0) mvpName = "—";
   document.getElementById("mvpName").textContent = mvpName;
+  const mvpAvatar = document.getElementById("mvpAvatar");
+  if (mvpPts > 0) {
+    mvpAvatar.classList.add("show");
+    mvpAvatar.innerHTML = mvpPhoto
+      ? `<img src="${mvpPhoto}" alt="MVP">`
+      : mvpInitials;
+  } else {
+    mvpAvatar.classList.remove("show");
+    mvpAvatar.innerHTML = "";
+  }
 
   showScreen("winner");
   launchConfetti();
 }
 
 function resetAll() {
+  Object.keys(setupPhotos).forEach(k => delete setupPhotos[k]);
+  ["a","b"].forEach(team => {
+    [1,2,3,4].forEach(i => clearPlayerPhoto(team + i));
+  });
   state = {
     teams: { a: "Équipe Alpha", b: "Équipe Beta" },
     players: { a: ["","","",""], b: ["","","",""] },
+    playerPhotos: { a: [null,null,null,null], b: [null,null,null,null] },
     scores: { a: 0, b: 0 },
     playerScores: { a: [0,0,0,0], b: [0,0,0,0] },
     round: 1, ptsValue: 2, selected: null
   };
   document.getElementById("scoreFeed").innerHTML = "";
+  document.getElementById("mvpAvatar").classList.remove("show");
+  document.getElementById("mvpAvatar").innerHTML = "";
   showScreen("setup");
 }
 
