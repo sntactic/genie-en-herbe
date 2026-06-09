@@ -488,7 +488,7 @@ body{background:var(--cream);font-family:'Inter',sans-serif;color:var(--text-pri
     </div>
     <label class="modal-check">
       <input type="checkbox" id="substituteResetPts">
-      <span>Réinitialiser les points individuels de ce siège (le score d'équipe est ajusté)</span>
+      <span>Remettre le compteur individuel de ce siège à 0 (le score d'équipe est conservé — le remplaçant repart de zéro)</span>
     </label>
     <div class="modal-actions">
       <button type="button" class="btn-action btn-modal-cancel" onclick="closeSubstituteModal()">Annuler</button>
@@ -510,7 +510,9 @@ let state = {
   playerScores: { a: [0,0,0,0], b: [0,0,0,0] },
   round: 1,
   ptsValue: 2,
-  selected: null
+  selected: null,
+  // Historique des joueurs remplacés : { name, photo, pts, team }
+  substitutionHistory: []
 };
 
 const DEFAULT_NAMES = {
@@ -616,6 +618,7 @@ function startMatch() {
   state.playerScores = { a: [0,0,0,0], b: [0,0,0,0] };
   state.round = 1;
   state.selected = null;
+  state.substitutionHistory = [];
   updateMatchUI();
   showScreen("match");
   document.getElementById("bottomBar").style.display = "flex";
@@ -750,6 +753,7 @@ function confirmSubstitute() {
   if (!state.selected) return;
   const { team, index } = state.selected;
   const oldName = state.players[team][index];
+  const oldPhoto = state.playerPhotos[team][index];
   const newName = document.getElementById("substituteName").value.trim();
   if (!newName) {
     document.getElementById("substituteName").focus();
@@ -760,18 +764,27 @@ function confirmSubstitute() {
     return;
   }
 
-  if (document.getElementById("substituteResetPts").checked) {
-    const pts = state.playerScores[team][index];
-    state.scores[team] -= pts;
-    if (state.scores[team] < 0) state.scores[team] = 0;
+  const resetPts = document.getElementById("substituteResetPts").checked;
+
+  // Toujours sauvegarder l'ancien joueur dans l'historique (pour le MVP)
+  state.substitutionHistory.push({
+    name: oldName,
+    photo: oldPhoto,
+    pts: state.playerScores[team][index],
+    team: team
+  });
+
+  if (resetPts) {
+    // Remettre le compteur individuel du siège à 0.
+    // Le score ÉQUIPE ne change PAS : les points appartiennent à l'équipe,
+    // pas au joueur. Le remplaçant commence juste son propre compteur à 0.
     state.playerScores[team][index] = 0;
-    updateScore(team, true);
   }
 
   state.players[team][index] = newName;
-  if (substitutePhotoData) {
-    state.playerPhotos[team][index] = substitutePhotoData;
-  }
+  // Photo : on efface toujours la photo de l'ancien pour le nouveau remplaçant
+  // (sauf si l'utilisateur en fournit une nouvelle)
+  state.playerPhotos[team][index] = substitutePhotoData || null;
 
   addFeed("↔ " + oldName + " → " + newName + " (" + state.teams[team] + ")", team);
   renderPlayers(team);
@@ -837,6 +850,8 @@ function endMatch() {
   document.getElementById("wScoreB").textContent = sb;
 
   let mvpName = "—", mvpPts = -1, mvpPhoto = null, mvpInitials = "";
+
+  // Joueurs actuellement en jeu
   ["a","b"].forEach(t => {
     state.playerScores[t].forEach((pts, i) => {
       if (pts > mvpPts) {
@@ -847,6 +862,17 @@ function endMatch() {
       }
     });
   });
+
+  // Joueurs remplacés (conservés dans l'historique)
+  state.substitutionHistory.forEach(entry => {
+    if (entry.pts > mvpPts) {
+      mvpPts = entry.pts;
+      mvpName = entry.name + " (" + state.teams[entry.team] + ") — " + entry.pts + " pt";
+      mvpPhoto = entry.photo;
+      mvpInitials = getInitials(entry.name);
+    }
+  });
+
   if (mvpPts <= 0) mvpName = "—";
   document.getElementById("mvpName").textContent = mvpName;
   const mvpAvatar = document.getElementById("mvpAvatar");
@@ -875,7 +901,8 @@ function resetAll() {
     playerPhotos: { a: [null,null,null,null], b: [null,null,null,null] },
     scores: { a: 0, b: 0 },
     playerScores: { a: [0,0,0,0], b: [0,0,0,0] },
-    round: 1, ptsValue: 2, selected: null
+    round: 1, ptsValue: 2, selected: null,
+    substitutionHistory: []
   };
   document.getElementById("scoreFeed").innerHTML = "";
   document.getElementById("mvpAvatar").classList.remove("show");
