@@ -324,6 +324,14 @@ body{background:var(--cream);font-family:'Inter',sans-serif;color:var(--text-pri
   text-transform:uppercase;border:none;border-radius:10px;cursor:pointer;transition:background .2s,transform .1s;
 }
 .btn-play-again:hover{background:var(--gold-light);transform:translateY(-2px)}
+.btn-pdf{
+  display:block;width:100%;margin-top:12px;padding:11px 28px;
+  background:rgba(255,255,255,0.1);color:var(--cream);
+  font-family:'Oswald',sans-serif;font-size:.95rem;font-weight:600;letter-spacing:2px;
+  text-transform:uppercase;border:1px solid rgba(228,168,130,0.35);border-radius:10px;
+  cursor:pointer;transition:background .2s,transform .1s;
+}
+.btn-pdf:hover{background:rgba(255,255,255,0.18);transform:translateY(-1px)}
 
 @keyframes scorePop{0%{transform:scale(1)}50%{transform:scale(1.25)}100%{transform:scale(1)}}
 @keyframes playerGlow{0%,100%{background:transparent}30%{background:rgba(212,168,67,0.2)}}
@@ -537,6 +545,7 @@ body{background:var(--cream);font-family:'Inter',sans-serif;color:var(--text-pri
       </div>
     </div>
     <button class="btn-play-again" onclick="resetAll()">Nouveau match</button>
+    <button class="btn-pdf" onclick="downloadPDF()">⬇ Télécharger le résumé PDF</button>
   </div>
 </div>
 
@@ -577,6 +586,7 @@ body{background:var(--cream);font-family:'Inter',sans-serif;color:var(--text-pri
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 // Photos de profil (base64) pendant la configuration
 const setupPhotos = {};
@@ -1103,6 +1113,228 @@ function endMatch() {
   SFX.endMatch();
   showScreen("winner");
   launchConfetti();
+}
+
+function downloadPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const W = 210, margin = 18;
+  let y = 0;
+
+  // ── Couleurs thème ──────────────────────────────────────────────────────
+  const MAROON  = [61, 28, 16];
+  const GOLD    = [212, 168, 67];
+  const CREAM   = [245, 237, 230];
+  const TEAM_A  = [196, 68, 26];
+  const TEAM_B  = [46, 109, 164];
+  const WHITE   = [255, 255, 255];
+  const GRAY    = [120, 80, 60];
+
+  // ── Header bandeau ──────────────────────────────────────────────────────
+  doc.setFillColor(...MAROON);
+  doc.rect(0, 0, W, 38, "F");
+
+  doc.setFillColor(...GOLD);
+  doc.rect(0, 36, W, 2, "F");
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(20);
+  doc.setTextColor(...GOLD);
+  doc.text("GÉNIE EN HERBE — IPSL", W / 2, 16, { align: "center" });
+
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...CREAM);
+  doc.text("RÉSUMÉ DU MATCH", W / 2, 24, { align: "center" });
+
+  // Date/heure
+  const now = new Date();
+  const dateStr = now.toLocaleDateString("fr-FR", { weekday:"long", year:"numeric", month:"long", day:"numeric" });
+  const timeStr = now.toLocaleTimeString("fr-FR", { hour:"2-digit", minute:"2-digit" });
+  doc.setFontSize(8);
+  doc.setTextColor(...CREAM);
+  doc.text("Fin du match : " + dateStr + " à " + timeStr, W / 2, 32, { align: "center" });
+
+  y = 50;
+
+  // ── Résultat principal ──────────────────────────────────────────────────
+  const sa = state.scores.a, sb = state.scores.b;
+  const winName = sa > sb ? state.teams.a : sb > sa ? state.teams.b : "Égalité";
+
+  // Carte résultat
+  doc.setFillColor(...CREAM);
+  doc.roundedRect(margin, y, W - margin*2, 36, 4, 4, "F");
+  doc.setDrawColor(...GOLD);
+  doc.setLineWidth(0.6);
+  doc.roundedRect(margin, y, W - margin*2, 36, 4, 4, "S");
+
+  // Scores équipes
+  const midX = W / 2;
+  // Équipe A
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.setTextColor(...TEAM_A);
+  doc.text(state.teams.a.toUpperCase(), midX - 28, y + 10, { align: "center" });
+  doc.setFontSize(26);
+  doc.setTextColor(...TEAM_A);
+  doc.text(String(sa), midX - 28, y + 28, { align: "center" });
+
+  // VS
+  doc.setFontSize(9);
+  doc.setTextColor(...GRAY);
+  doc.setFont("helvetica", "normal");
+  doc.text("VS", midX, y + 20, { align: "center" });
+
+  // Équipe B
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.setTextColor(...TEAM_B);
+  doc.text(state.teams.b.toUpperCase(), midX + 28, y + 10, { align: "center" });
+  doc.setFontSize(26);
+  doc.setTextColor(...TEAM_B);
+  doc.text(String(sb), midX + 28, y + 28, { align: "center" });
+
+  y += 44;
+
+  // Vainqueur
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.setTextColor(...MAROON);
+  const trophy = sa === sb ? "🤝 Égalité !" : "🏆 Vainqueur : " + winName;
+  doc.text(trophy, W / 2, y, { align: "center" });
+
+  y += 10;
+
+  // Manches jouées
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(...GRAY);
+  doc.text("Nombre de manches : " + state.round, W / 2, y, { align: "center" });
+
+  y += 14;
+
+  // ── Tableau joueurs ─────────────────────────────────────────────────────
+  const drawTeamTable = (team, color, startY) => {
+    const colW = W / 2 - margin - 4;
+    const xOff = team === "a" ? margin : W / 2 + 4;
+
+    // En-tête équipe
+    doc.setFillColor(...color);
+    doc.roundedRect(xOff, startY, colW, 9, 2, 2, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(...WHITE);
+    doc.text(state.teams[team].toUpperCase(), xOff + colW / 2, startY + 6, { align: "center" });
+
+    let ty = startY + 12;
+
+    // Joueurs actifs
+    state.players[team].forEach((name, i) => {
+      const pts = state.playerScores[team][i];
+      const isEven = i % 2 === 0;
+      if (isEven) {
+        doc.setFillColor(245, 237, 230);
+        doc.rect(xOff, ty - 4, colW, 9, "F");
+      }
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8.5);
+      doc.setTextColor(...MAROON);
+      doc.text(name || "—", xOff + 4, ty + 1);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8.5);
+      const ptsLabel = (pts >= 0 ? "" : "") + pts + " pt";
+      doc.setTextColor(pts < 0 ? 180 : 61, pts < 0 ? 30 : 28, pts < 0 ? 30 : 16);
+      doc.text(ptsLabel, xOff + colW - 4, ty + 1, { align: "right" });
+      ty += 9;
+    });
+
+    // Joueurs remplacés
+    const subs = state.substitutionHistory.filter(e => e.team === team);
+    if (subs.length > 0) {
+      doc.setFont("helvetica", "italic");
+      doc.setFontSize(7);
+      doc.setTextColor(...GRAY);
+      doc.text("Remplaçants :", xOff + 4, ty + 2);
+      ty += 7;
+      subs.forEach((entry, i) => {
+        const isEven = i % 2 === 0;
+        if (isEven) {
+          doc.setFillColor(235, 225, 215);
+          doc.rect(xOff, ty - 4, colW, 8, "F");
+        }
+        doc.setFont("helvetica", "italic");
+        doc.setFontSize(7.5);
+        doc.setTextColor(...GRAY);
+        doc.text(entry.name || "—", xOff + 4, ty);
+        doc.setFont("helvetica", "bold");
+        doc.text(entry.pts + " pt", xOff + colW - 4, ty, { align: "right" });
+        ty += 8;
+      });
+    }
+
+    // Ligne total
+    doc.setDrawColor(...color);
+    doc.setLineWidth(0.4);
+    doc.line(xOff, ty, xOff + colW, ty);
+    ty += 5;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(...color);
+    doc.text("TOTAL", xOff + 4, ty);
+    doc.text(state.scores[team] + " pts", xOff + colW - 4, ty, { align: "right" });
+
+    return ty + 8;
+  };
+
+  // Titre section
+  doc.setFillColor(...MAROON);
+  doc.rect(margin, y, W - margin*2, 8, "F");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.setTextColor(...GOLD);
+  doc.text("DÉTAIL DES JOUEURS", W / 2, y + 5.5, { align: "center" });
+  y += 12;
+
+  const endA = drawTeamTable("a", TEAM_A, y);
+  const endB = drawTeamTable("b", TEAM_B, y);
+  y = Math.max(endA, endB) + 10;
+
+  // ── MVP ─────────────────────────────────────────────────────────────────
+  let mvpName = "—", mvpPts = -1;
+  ["a","b"].forEach(t => {
+    state.playerScores[t].forEach((pts, i) => {
+      if (pts > mvpPts) { mvpPts = pts; mvpName = state.players[t][i] + " (" + state.teams[t] + ")"; }
+    });
+  });
+  state.substitutionHistory.forEach(e => {
+    if (e.pts > mvpPts) { mvpPts = e.pts; mvpName = e.name + " (" + state.teams[e.team] + ")"; }
+  });
+
+  if (mvpPts > 0) {
+    doc.setFillColor(252, 245, 220);
+    doc.roundedRect(margin, y, W - margin*2, 14, 3, 3, "F");
+    doc.setDrawColor(...GOLD);
+    doc.setLineWidth(0.5);
+    doc.roundedRect(margin, y, W - margin*2, 14, 3, 3, "S");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(...MAROON);
+    doc.text("⭐  MVP : " + mvpName + " — " + mvpPts + " pts", W / 2, y + 9, { align: "center" });
+    y += 20;
+  }
+
+  // ── Pied de page ────────────────────────────────────────────────────────
+  const pageH = 297;
+  doc.setFillColor(...MAROON);
+  doc.rect(0, pageH - 12, W, 12, "F");
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7);
+  doc.setTextColor(...CREAM);
+  doc.text("Institut Polytechnique de Saint-Louis — Génie en Herbe", W / 2, pageH - 4, { align: "center" });
+
+  // ── Téléchargement ──────────────────────────────────────────────────────
+  const filename = "resume-match-" + now.toISOString().slice(0, 10) + ".pdf";
+  doc.save(filename);
 }
 
 function resetAll() {
