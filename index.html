@@ -29,7 +29,7 @@ body{background:var(--cream);font-family:'Inter',sans-serif;color:var(--text-pri
   border-radius:20px;padding:40px 48px;width:100%;max-width:820px;backdrop-filter:blur(4px);
 }
 .setup-logo-center{text-align:center;margin-bottom:24px}
-.setup-logo-center img{height:64px;filter:brightness(1.2) saturate(0.8)}
+.setup-logo-center img{height:64px;opacity:0.95}
 .setup-title{
   font-family:'Oswald',sans-serif;font-size:2rem;font-weight:700;text-align:center;
   color:var(--gold-light);letter-spacing:3px;text-transform:uppercase;margin-bottom:32px;
@@ -89,9 +89,13 @@ body{background:var(--cream);font-family:'Inter',sans-serif;color:var(--text-pri
 .match-header{
   background:var(--maroon-dark);padding:10px 24px;display:flex;align-items:center;
   justify-content:space-between;box-shadow:0 2px 12px rgba(0,0,0,0.3);flex-shrink:0;
+  position:relative;
 }
-.match-header img{height:42px;filter:brightness(1.1)}
-.match-header-center{flex:1;text-align:center}
+.match-header img{height:42px;opacity:0.95}
+.match-header-center{
+  position:absolute;left:50%;transform:translateX(-50%);
+  text-align:center;pointer-events:none;
+}
 .match-round-label{font-size:.7rem;color:var(--maroon-pale);text-transform:uppercase;letter-spacing:2px}
 .match-round-num{
   font-family:'Oswald',sans-serif;font-size:1.5rem;font-weight:700;color:var(--cream);letter-spacing:1px;
@@ -604,7 +608,89 @@ function avatarHtml(team, index, name) {
   return `<div class="${cls}">${getInitials(name)}</div>`;
 }
 
+// ── Cache localStorage ──────────────────────────────────────────────────────
+const CACHE_KEY = "ipsl_match_state";
+
+function saveState() {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ state, setupPhotos }));
+  } catch(e) {}
+}
+
+function loadCachedState() {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return false;
+    const cached = JSON.parse(raw);
+    if (!cached || !cached.state) return false;
+    // Restaurer setupPhotos
+    Object.assign(setupPhotos, cached.setupPhotos || {});
+    // Ne restaurer que si un match était en cours
+    if (cached.state.scores) {
+      Object.assign(state, cached.state);
+      return true;
+    }
+  } catch(e) {}
+  return false;
+}
+
+function clearCache() {
+  try { localStorage.removeItem(CACHE_KEY); } catch(e) {}
+}
+// ────────────────────────────────────────────────────────────────────────────
+
 buildPlayerFields();
+
+// Tenter de restaurer un match en cours depuis le cache
+(function restoreFromCache() {
+  if (loadCachedState()) {
+    const wasInMatch = state.scores && (state.scores.a > 0 || state.scores.b > 0 || state.round > 1);
+    if (wasInMatch) {
+      // Repeupler les champs setup avec les noms sauvegardés
+      ["a","b"].forEach(team => {
+        [1,2,3,4].forEach((_, i) => {
+          const input = document.getElementById(team + (i+1));
+          if (input) input.value = state.players[team][i] || "";
+        });
+        const teamInput = document.getElementById("name" + team.toUpperCase());
+        if (teamInput) teamInput.value = state.teams[team] || "";
+      });
+      // Restaurer les photos dans setupPhotos → previews
+      ["a","b"].forEach(team => {
+        [1,2,3,4].forEach((_, i) => {
+          const id = team + (i+1);
+          const photo = state.playerPhotos[team][i];
+          if (photo) {
+            setupPhotos[id] = photo;
+            const preview = document.getElementById("preview-" + id);
+            const ph = document.getElementById("ph-" + id);
+            if (preview && ph) {
+              preview.src = photo;
+              preview.style.display = "block";
+              ph.style.display = "none";
+              preview.closest(".photo-upload").classList.add("has-photo");
+              const clrBtn = document.getElementById("clear-" + id);
+              if (clrBtn) clrBtn.classList.add("visible");
+            }
+          }
+        });
+      });
+      // Reprendre le match directement
+      updateMatchUI();
+      showScreen("match");
+      document.getElementById("ptsValueMatch").value = state.ptsValue;
+      updateActionButtons();
+      // Bannière de reprise
+      setTimeout(() => {
+        const feed = document.getElementById("scoreFeed");
+        const item = document.createElement("div");
+        item.className = "feed-item neutral";
+        item.innerHTML = '<span class="feed-pts">↺ Match restauré depuis le cache</span>';
+        feed.insertBefore(item, feed.firstChild);
+      }, 400);
+    }
+  }
+})();
 
 function startMatch() {
   state.teams.a = document.getElementById("nameA").value.trim() || "Équipe Alpha";
@@ -625,6 +711,7 @@ function startMatch() {
   document.getElementById("ptsValueMatch").value = state.ptsValue;
   updateActionButtons();
   showRoundOverlay(1);
+  saveState();
 }
 
 function onPtsValueChange() {
@@ -790,6 +877,7 @@ function confirmSubstitute() {
   renderPlayers(team);
   selectPlayer(team, index);
   closeSubstituteModal();
+  saveState();
 }
 
 function modifyPoints(sign) {
@@ -798,8 +886,7 @@ function modifyPoints(sign) {
   const pts = state.ptsValue * sign;
   state.scores[team] += pts;
   state.playerScores[team][index] += pts;
-  if (state.scores[team] < 0) state.scores[team] = 0;
-  if (state.playerScores[team][index] < 0) state.playerScores[team][index] = 0;
+
 
   updateScore(team, true);
   const ptsEl = document.getElementById("pts_" + team + "_" + index);
@@ -810,6 +897,7 @@ function modifyPoints(sign) {
 
   const signStr = pts >= 0 ? "+" : "";
   addFeed(signStr + pts + " pt — " + state.teams[team] + " · " + state.players[team][index], team);
+  saveState();
 }
 
 function addFeed(text, team) {
@@ -827,6 +915,7 @@ function nextRound() {
   document.getElementById("roundLabel").textContent = "Manche " + state.round;
   showRoundOverlay(state.round);
   addFeed("— Manche " + state.round + " —", null);
+  saveState();
 }
 
 function showRoundOverlay(num) {
@@ -891,6 +980,7 @@ function endMatch() {
 }
 
 function resetAll() {
+  clearCache();
   Object.keys(setupPhotos).forEach(k => delete setupPhotos[k]);
   ["a","b"].forEach(team => {
     [1,2,3,4].forEach(i => clearPlayerPhoto(team + i));
