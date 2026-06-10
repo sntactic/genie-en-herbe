@@ -880,6 +880,54 @@ function confirmSubstitute() {
   saveState();
 }
 
+// ── Moteur audio (Web Audio API) ────────────────────────────────────────────
+const SFX = (() => {
+  let ctx = null;
+  function getCtx() {
+    if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (ctx.state === "suspended") ctx.resume();
+    return ctx;
+  }
+
+  function playTone(frequency, type, duration, gainVal, startDelay) {
+    startDelay = startDelay || 0;
+    const c = getCtx();
+    const osc = c.createOscillator();
+    const gain = c.createGain();
+    const comp = c.createDynamicsCompressor();
+    osc.connect(gain);
+    gain.connect(comp);
+    comp.connect(c.destination);
+    osc.type = type;
+    osc.frequency.setValueAtTime(frequency, c.currentTime + startDelay);
+    gain.gain.setValueAtTime(gainVal, c.currentTime + startDelay);
+    gain.gain.exponentialRampToValueAtTime(0.001, c.currentTime + startDelay + duration);
+    osc.start(c.currentTime + startDelay);
+    osc.stop(c.currentTime + startDelay + duration + 0.05);
+  }
+
+  function addPoints() {
+    playTone(520, "square", 0.15, 0.8, 0);
+    playTone(780, "square", 0.2,  0.7, 0.13);
+  }
+
+  function removePoints() {
+    playTone(340, "sawtooth", 0.12, 0.8, 0);
+    playTone(220, "sawtooth", 0.22, 0.7, 0.1);
+  }
+
+  function endMatch() {
+    var seq = [[523,0],[523,0.15],[523,0.30],[659,0.45],[784,0.60],[784,0.75],[784,0.90],[1047,1.10]];
+    seq.forEach(function(n){ playTone(n[0], "square", 0.25, 0.9, n[1]); });
+    playTone(1047, "sine", 1.5, 0.7, 1.45);
+    playTone(784,  "sine", 1.5, 0.5, 1.45);
+    playTone(523,  "sine", 1.5, 0.4, 1.45);
+  }
+
+  return { addPoints, removePoints, endMatch };
+})();
+// ────────────────────────────────────────────────────────────────────────────
+
 function modifyPoints(sign) {
   if (!state.selected) return;
   const { team, index } = state.selected;
@@ -887,6 +935,7 @@ function modifyPoints(sign) {
   state.scores[team] += pts;
   state.playerScores[team][index] += pts;
 
+  if (sign > 0) SFX.addPoints(); else SFX.removePoints();
 
   updateScore(team, true);
   const ptsEl = document.getElementById("pts_" + team + "_" + index);
@@ -975,6 +1024,7 @@ function endMatch() {
     mvpAvatar.innerHTML = "";
   }
 
+  SFX.endMatch();
   showScreen("winner");
   launchConfetti();
 }
